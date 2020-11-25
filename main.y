@@ -1,6 +1,7 @@
 %{
     #include"common.h"
     extern TreeNode * root;
+    extern yyFlexLexer lexer;
     int yylex();
     int yyerror( char const * );
 %}
@@ -8,13 +9,16 @@
 
 %start program
 
-%token ID INTEGER
-%token IF ELSE WHILE
-%token INT VOID
-%token LPAREN RPAREN LBRACE RBRACE SEMICOLON
+%token ID INTEGER CONSTSTR CONSTCHAR
+%token IF ELSE WHILE FOR
+%token INT VOID CHAR BOOL
+%token LPAREN RPAREN LBRACE RBRACE SEMICOLON LBRACKET RBRACKET
 %token TRUE FALSE
-%token ADD ASSIGN EQUAL NOT
+%token ADD ASSIGN EQUAL NOT MINUS MUL DIV MOD OR AND NOTEQUAL LESS GREATER LESSEAUAL GREATEREQUAL 
 %token PRINTF SCANF
+%token CONST
+%token RETURN CONTINUE BREAK
+
 
 %right NOT
 %left ADD
@@ -24,47 +28,120 @@
 %nonassoc ELSE 
 %%
 program
-    : statements {root=new TreeNode(NODE_PROG);root->addChild($1);}
+    : stmts {root=new TreeNode(NODE_PROG);root->addChild($1);}
     ;
-statements
-    : statement {$$=$1;}
-    | statements statement{$$=$1;$$->addSibling($2);}
+stmts
+    : stmt {$$=$1;}
+    | stmts stmt{$$=$1;$$->addSibling($2);}
     ;
-statement
-    : instruction {$$=$1;}
-    | if_else {$$=$1;}
-    | while {$$=$1;}
-    | LBRACE statements RBRACE {$$=$2;}
+stmt
+    : exprStmt {$$=$1;}
+    | declStmt {$$=$1;}
+    | blankStmt {$$=$1;}
+    | ifStmt {$$=$1;}
+    | wlStmt {$$=$1;}
+    | breakStmt {$$=$1;}
+    | continueStmt {$$=$1;}
+    | returnStmt {$$=$1;}
+    | asgStmt {$$=$1;}
+    | forStmt {$$=$1;}
+    | compoundStmt {$$=$1;}
     ;
-if_else
-    : IF bool_statment statement %prec LOWER_THEN_ELSE {
-        TreeNode *node=new TreeNode(NODE_STMT);
-        node->stmtType=STMT_IF;
-        node->addChild($2);
-        node->addChild($3);
-        $$=node;
+exprStmt
+    : expr SEMICOLON {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_EXPR;
+        node->addChild($1);
+        $$ = node;
     }
-    | IF bool_statment statement ELSE statement {
-        TreeNode *node=new TreeNode(NODE_STMT);
-        node->stmtType=STMT_IF;
-        node->addChild($2);
+    ;
+declStmt
+    : constDeclStmt {$$ = $1;}
+    | varDeclStmt {$$ = $1;}
+    ;
+blankStmt
+    : SEMICOLON {
+        TreeNode *node = new node(NODE_STMT);
+        node->stmtType = STMT_BLANK;
+        $$ = node;
+    }
+ifStmt
+    : IF LPAREN cond RPAREN stmt %prec LOWER_THEN_ELSE {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_IF;
         node->addChild($3);
         node->addChild($5);
-        $$=node;
+        $$ = node;
+    }
+    | IF LPAREN cond RPAREN stmt ELSE stmt {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_IF;
+        node->addChild($3);
+        node->addChild($5);
+        node->addChild($7);
+        $$ = node;
     }
     ;
-while
-    : WHILE bool_statment statement {
-        TreeNode *node=new TreeNode(NODE_STMT);
-        node->stmtType=STMT_WHILE;
+wlStmt
+    : WHILE LPAREN cond RPAREN stmt {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_WHILE;
         node->addChild($2);
         node->addChild($3);
-        $$=node;
+        $$ = node;
     }
     ;
-bool_statment
-    : LPAREN bool_expr RPAREN {$$=$2;}
+cond
+    : bool_expr {$$=$1;}
     ;
+breakStmt
+    : BREAK SEMICOLON {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_BREAK;
+        $$ = node;
+    }
+    ;
+continueStmt
+    : CONTINUE SEMICOLON {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_CONTINUE;
+        $$ = node;
+    }
+    ;
+returnStmt
+    : RETURN SEMICOLON {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_RETURN;
+        $$ = node;
+    }
+    ;
+    | RETURN expr {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_RETURN;
+        node->addChild($2);
+        $$ = node;
+    }
+    ;
+asgStmt
+    : lVal ASSIGN expr {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_ASSIGN;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    ;
+forStmt
+    : 
+
+    ;
+compoundStmt
+    : LBRACE stmts RBRACE {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_COMPOUND;
+        node->addChild($2);
+        $$ = node;
+    }
 instruction
     : type ID ASSIGN expr SEMICOLON {
         TreeNode *node=new TreeNode(NODE_STMT);

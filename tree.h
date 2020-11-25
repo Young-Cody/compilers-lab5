@@ -9,7 +9,9 @@ using std::endl;
 using std::string;
 
 enum NodeType{
-    NODE_CONST,
+    NODE_CONSTINT,
+    NODE_CONSTSTR,
+    NODE_CONSTCHAR,
     NODE_BOOL,
     NODE_VAR,
     NODE_EXPR,
@@ -22,21 +24,41 @@ enum NodeType{
 enum StmtType{
     STMT_IF,
     STMT_WHILE,
+    STMT_FOR,
     STMT_DECL,
     STMT_ASSIGN,
     STMT_PRINTF,
-    STMT_SCANF
+    STMT_SCANF,
+    STMT_BLANK,
+    STMT_CONTINUE,
+    STMT_BREAK,
+    STMT_RETURN,
+    STMT_EXPR,
+    STMT_COMPOUND
 };
 
 enum OpType{
     OP_EQUAL,
-    OP_NOT,
+    OP_LESS,
+    OP_GREATER,
+    OP_LESSEQUAL,
+    OP_GREATEREQUAL,
+    OP_NOTEQUAL,
     OP_ADD,
+    OP_MINUS,
+    OP_MUL,
+    OP_DIV,
+    OP_MOD,
+    OP_AND,
+    OP_OR,
+    OP_NOT
 };
 
 enum VarType{
     VAR_INTEGER,
-    VAR_VOID
+    VAR_VOID,
+    VAR_BOOL,
+    VAR_CHAR
 };
 
 struct TreeNode {
@@ -62,10 +84,14 @@ struct TreeNode {
 
     int int_val;
     bool bool_val;
+    string const_str_val;
+    char const_char_val;
+
     StmtType stmtType;
     OpType opType;
+
     VarType varType;
-    string var_name;
+    int var_ptr;
 
     TreeNode(NodeType type);
 };
