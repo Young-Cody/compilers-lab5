@@ -72,7 +72,7 @@ blankStmt
         $$ = node;
     }
 ifStmt
-    : IF LPAREN cond RPAREN stmt %prec LOWER_THEN_ELSE {
+    : IF LPAREN expr RPAREN stmt %prec LOWER_THEN_ELSE {
         TreeNode *node = new TreeNode(NODE_STMT);
         node->stmtType = STMT_IF;
         node->addChild($3);
@@ -96,9 +96,6 @@ wlStmt
         node->addChild($3);
         $$ = node;
     }
-    ;
-cond
-    : bool_expr {$$=$1;}
     ;
 breakStmt
     : BREAK SEMICOLON {
@@ -180,7 +177,8 @@ optExpr
         $$ = node;
     }
     ;
-expr:
+expr
+    :
     expr ADD expr {
         TreeNode *node = new TreeNode(NODE_OP);
         node->opType = OP_ADD;
@@ -336,7 +334,41 @@ expr:
         $$ = node;
     }
     ;
-
+funcRParams
+    :
+    expr {
+        $$ = $1;
+    }
+    |
+    funcRParams COMMA expr {
+        $$ = $1;
+        $$->addSibling($3);
+    }
+    ;
+lVal
+    :
+    ID {
+        TreeNode *node = new TreeNode(NODE_LVAL);
+        node->addChild($1);
+        $$ = node;
+    }
+    ID varBracketList {
+        TreeNode *node = new TreeNode(NODE_LVAL);
+        node->addChild($1);
+        node->addChild($2);
+        $$ = node;
+    }
+    ;
+varBracketList
+    :
+    LBRACKET expr RBRACKET {
+        $$ = $1;
+    }
+    |
+    varBracketList LBRACKET expr RBRACKET {
+        $$ = $1;
+        $$->addSibling($3);
+    }
 type
     : INT {
         TreeNode *node=new TreeNode(NODE_TYPE);
@@ -348,6 +380,90 @@ type
         node->varType=VAR_VOID;
         $$=node;         
     }
+    | BOOL {
+        TreeNode *node=new TreeNode(NODE_TYPE);
+        node->varType=VAR_BOOL;
+        $$=node;         
+    }
+    | CHAR {
+        TreeNode *node=new TreeNode(NODE_TYPE);
+        node->varType=VAR_CHAR;
+        $$=node;         
+    }
     ;
-
+constDeclStmt
+    :
+    CONST type constDefList SEMICOLON {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_CONSTDECL;
+        node->addChild($2);
+        node->addChild($3);
+        TreeNode *head = $3;
+        while(head)
+        {
+            head->child[0]->nodeType =  NODE_CONSTVAR;
+            head->child[0]->varType = $2->varType;
+        }
+    }
+    ;
+constDefList
+    :
+    constDefList COMMA constDef {
+        $$ = $1;
+        $$->addSibling($3);
+    }
+    |
+    constDef {
+        $$ = $1;
+    }
+    ;
+constDef
+    :
+    ID ASSIGN constInitVal {
+        TreeNode *node = new TreeNode(NODE_CONSTDECL);
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    |
+    ID constBracketList ASSIGN constInitVal {
+        TreeNode *node = new TreeNode(NODE_CONSTDECL);
+        node->addChild($1);
+        node->addChild($2);
+        node->addChild($4);
+        $$ = node;
+    }
+constBracketList
+    :
+    expr {
+        $$ = $1;
+    }
+    constBracketList LBRACKET expr RBRACKET RBRACKET {
+        $$ = $1;
+        $$->addSibling($3);
+    }
+constInitVal
+    :
+    expr {
+        TreeNode *node = new TreeNode(NODE_CONSTINIVAL);
+        node->addChild($1);
+        $$ = node;
+    }
+    |
+    LBRACE constInitValList RBRACE {
+        TreeNode *node = new TreeNode(NODE_CONSTINIVAL);
+        node->addChild($2);
+        $$ = node;
+    }
+    ;
+constInitValList
+    :
+    constInitVal {
+        $$ = $1;
+    }
+    |
+    constInitValList COMMA constInitVal {
+        $$ = $1;
+        $$->addSibling($3);
+    }
 %%

@@ -12,20 +12,26 @@ enum NodeType{
     NODE_CONSTINT,
     NODE_CONSTSTR,
     NODE_CONSTCHAR,
+    NODE_CONSTDECL,
+    NODE_CONSTINITVAL,
+    NODE_VARDECL,
     NODE_BOOL,
     NODE_VAR,
+    NODE_CONSTVAR,
     NODE_EXPR,
     NODE_TYPE,
     NODE_STMT,
     NODE_PROG,
-    NODE_OP
+    NODE_OP,
+    NODE_LVAL
 };
 
 enum StmtType{
     STMT_IF,
     STMT_WHILE,
     STMT_FOR,
-    STMT_DECL,
+    STMT_CONSTDECL,
+    STMT_VARDECL,
     STMT_ASSIGN,
     STMT_PRINTF,
     STMT_SCANF,
@@ -97,7 +103,7 @@ struct TreeNode {
     OpType opType;
 
     VarType varType;
-    int var_val;
+    int var_name;
 
     TreeNode(NodeType type);
 };

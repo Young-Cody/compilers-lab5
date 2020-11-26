@@ -72,7 +72,7 @@ sigcomend \n
 }
 {ID} {
     TreeNode *node = new TreeNode(NODE_VAR);
-    node->var_val = atoi(yytext);
+    node->var_name = yytext;
     yylval = node;
     return ID;
 }

@@ -10,4 +10,10 @@ using std::vector;
 
 vector<const char*>   SymbolTable;
 
+struct item
+{
+    
+};
+
+
 #endif
