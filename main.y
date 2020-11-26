@@ -1,7 +1,6 @@
 %{
     #include"common.h"
     extern TreeNode * root;
-    extern yyFlexLexer lexer;
     int yylex();
     int yyerror( char const * );
 %}
@@ -19,13 +18,18 @@
 %token CONST
 %token RETURN CONTINUE BREAK
 
-
-%right NOT
-%left ADD
-%left EQUAL
+%left COMMA
 %right ASSIGN
+%left OR
+%left AND
+%left EQUAL NOTEQUAL
+%left GREATER LESS GREATEREQUAL LESSEAUAL
+%left ADD MINUS
+%left DIV MUL MOD
+%right NOT UMINUS UADD
+%left FUNC LVAL
 %nonassoc LOWER_THEN_ELSE
-%nonassoc ELSE 
+%nonassoc ELSE
 %%
 program
     : stmts {root=new TreeNode(NODE_PROG);root->addChild($1);}
@@ -46,6 +50,8 @@ stmt
     | asgStmt {$$=$1;}
     | forStmt {$$=$1;}
     | compoundStmt {$$=$1;}
+    | printfStmt {$$=$1;}
+    | scanfStmt {$$=$1;}
     ;
 exprStmt
     : expr SEMICOLON {
@@ -115,7 +121,7 @@ returnStmt
         $$ = node;
     }
     ;
-    | RETURN expr {
+    | RETURN expr SEMICOLON{
         TreeNode *node = new TreeNode(NODE_STMT);
         node->stmtType = STMT_RETURN;
         node->addChild($2);
@@ -123,7 +129,7 @@ returnStmt
     }
     ;
 asgStmt
-    : lVal ASSIGN expr {
+    : lVal ASSIGN expr SEMICOLON{
         TreeNode *node = new TreeNode(NODE_STMT);
         node->stmtType = STMT_ASSIGN;
         node->addChild($1);
@@ -133,7 +139,15 @@ asgStmt
     ;
 forStmt
     : 
-
+    FOR LPAREN optExpr SEMICOLON optExpr SEMICOLON optExpr RPAREN stmt {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_FOR;
+        node->addChild($3);
+        node->addChild($5);
+        node->addChild($7);
+        node->addChild($9);
+        $$ = node;
+    }
     ;
 compoundStmt
     : LBRACE stmts RBRACE {
@@ -142,26 +156,7 @@ compoundStmt
         node->addChild($2);
         $$ = node;
     }
-instruction
-    : type ID ASSIGN expr SEMICOLON {
-        TreeNode *node=new TreeNode(NODE_STMT);
-        node->stmtType=STMT_DECL;
-        node->addChild($1);
-        node->addChild($2);
-        node->addChild($4);
-        $$=node;
-    }
-    | ID ASSIGN expr SEMICOLON {
-        TreeNode *node=new TreeNode(NODE_STMT);
-        node->stmtType=STMT_ASSIGN;
-        node->addChild($1);
-        node->addChild($3);
-        $$=node;  
-    }
-    | printf SEMICOLON {$$=$1;}
-    | scanf SEMICOLON {$$=$1;}
-    ;
-printf
+printfStmt
     : PRINTF LPAREN expr RPAREN {
         TreeNode *node=new TreeNode(NODE_STMT);
         node->stmtType=STMT_PRINTF;
@@ -169,7 +164,7 @@ printf
         $$=node;
     }
     ;
-scanf
+scanfStmt
     : SCANF LPAREN expr RPAREN {
         TreeNode *node=new TreeNode(NODE_STMT);
         node->stmtType=STMT_SCANF;
@@ -177,34 +172,171 @@ scanf
         $$=node;
     }
     ;
-bool_expr
-    : TRUE {$$=$1;}
-    | FALSE {$$=$1;}
-    | expr EQUAL expr {
-        TreeNode *node=new TreeNode(NODE_OP);
-        node->opType=OP_EQUAL;
+optExpr
+    :
+    expr {$$=$1;}
+    | {
+        TreeNode *node = new TreeNode(NODE_EXPR);
+        $$ = node;
+    }
+    ;
+expr:
+    expr ADD expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_ADD;
         node->addChild($1);
         node->addChild($3);
-        $$=node;
+        $$ = node;
     }
-    | NOT bool_expr {
-        TreeNode *node=new TreeNode(NODE_OP);
-        node->opType=OP_NOT;
+    | expr MINUS expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_MINUS;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | MINUS expr %prec UMINUS {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_UMINUS;
         node->addChild($2);
-        $$=node;        
+        $$ = node;
     }
-    ;
-expr
-    : ID {$$=$1;}
-    | INTEGER {$$=$1;}
-    | expr ADD expr {
-        TreeNode *node=new TreeNode(NODE_OP);
-        node->opType=OP_ADD;
+    | ADD expr %prec UADD {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_UADD;
+        node->addChild($2);
+        $$ = node;
+    }
+    | expr MUL expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_MUL;
         node->addChild($1);
         node->addChild($3);
-        $$=node;   
+        $$ = node;
+    }
+    | expr DIV expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_DIV;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | expr MOD expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_MOD;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | expr EQUAL expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_EQUAL;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | expr LESS expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_LESS;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | expr GREATER expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_GREATER;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | expr LESSEAUAL expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_LESSEAUAL;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | expr GREATEREQUAL expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_GREATEREQUAL;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | expr NOTEQUAL expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_NOTEQUAL;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | expr AND expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_AND;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | expr OR expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_OR;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | expr COMMA expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_COMMA;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | NOT expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = NOT;
+        node->addChild($2);
+        $$ = node;
+    }
+    | INTEGER {$$ = $1;}
+    | TRUE {
+        TreeNode *node = new TreeNode(NODE_BOOL);
+        node->bool_val = true;
+        $$ = node;
+    }
+    | FALSE {
+        TreeNode *node = new TreeNode(NODE_BOOL);
+        node->bool_val = false;
+        $$ = node;
+    }
+    | LPAREN expr RPAREN {$$ = $1;}
+    | lVal ASSIGN expr {
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_ASSIGN;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | ID LPAREN funcRParams RPAREN %prec FUNC{
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_FUNC;
+        node->addChild($1);
+        node->addChild($3);
+        $$ = node;
+    }
+    | ID LPAREN RPAREN %prec FUNC{
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_FUNC;
+        node->addChild($1);
+        $$ = node;
+    }
+    | lVal %prec LVAL{
+        TreeNode *node = new TreeNode(NODE_OP);
+        node->opType = OP_LVAL;
+        node->addChild($1);
+        $$ = node;
     }
     ;
+
 type
     : INT {
         TreeNode *node=new TreeNode(NODE_TYPE);

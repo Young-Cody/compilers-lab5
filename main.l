@@ -2,12 +2,6 @@
 %{
     #include"common.h"
     #include"main.tab.hh"
-    yyFlexLexer lexer;
-    bool declare;
-    map<string, pair<vector<int>, vector<int>>> m;
-    int installID();
-    void begindomain();
-    void enddomain();
 %}
 
 INTEGER [0-9]+
@@ -28,9 +22,9 @@ sigcomend \n
 
 "true" return TRUE;
 "false" return FALSE;
-"int" {declare = true; return INT;}
-"char" {declare = true; return CHAR;}
-"bool" {declare = true;return BOOL;}
+"int" return INT;
+"char" return CHAR;
+"bool" return BOOL;
 "void" return VOID;
 "const" return CONST;
 
@@ -61,33 +55,38 @@ sigcomend \n
 "<=" return LESSEQUAL;
 ">=" return GREATEREQUAL;
 
+"," return COMMA;
 ";" return SEMICOLON;
 "(" return LPAREN;
 ")" return RPAREN;
-"{" {begindomain();return LBRACE;}
-"}" {enddomain();return RBRACE;}
+"{" return LBRACE;
+"}" return RBRACE;
 "[" return LBRACKET;
 "]" return RBRACKET;
 
 {INTEGER} {
-    TreeNode *node = new TreeNode(NODE_CONST);
+    TreeNode *node = new TreeNode(NODE_CONSTINT);
     node->int_val = atoi(yytext);
     yylval = node;
     return INTEGER;
 }
 {ID} {
-    int ptr = installID();
     TreeNode *node = new TreeNode(NODE_VAR);
-    node->var_ptr = ptr;
+    node->var_val = atoi(yytext);
     yylval = node;
     return ID;
 }
 {CONSTSTR} {
-    TreeNode *node = new TreeNode(NODE_CONST);
-    node->
+    TreeNode *node = new TreeNode(NODE_CONSTSTR);
+    node->const_str_val = yytext;
+    yylval = node;
+    return CONSTSTR;
 }
 {CONSTCHAR} {
-
+    TreeNode *node = new TreeNode(NODE_CONSTCHAR);
+    node->const_char_val = yytext;
+    yylval = node;
+    return CONSTCHAR;
 }
 {EOL}
 {WHITE}
@@ -99,37 +98,3 @@ sigcomend \n
 <SCOMMENT>{sigcomend} {BEGIN INITIAL;}
 
 %%
-
-int installID()
-{
-    if(declare)
-    {
-        if(m.find(lexer.YYText()) == m.end())
-        {
-            vector<int> num;
-            num.push_back(0);
-            m[lexer.YYText()] = {vector<int>(), num};
-        }
-        m[lexer.YYText()].first.push_back(signTable.size());
-        m[lexer.YYText()].second.back()++;
-        signTable.push_back(lexer.YYText());
-        declare = false;
-    }
-    return m[lexer.YYText()].first.back();
-}
-
-void begindomain()
-{
-    for(auto &i:m)
-        i.second.second.push_back(0);
-}
-
-void enddomain()
-{
-    for(auto &i:m)
-    {
-        for(int j = 0; j < i.second.second.back(); j++)
-            i.second.first.pop_back();
-        i.second.second.pop_back();
-    }
-}

@@ -51,7 +51,13 @@ enum OpType{
     OP_MOD,
     OP_AND,
     OP_OR,
-    OP_NOT
+    OP_NOT,
+    OP_UMINUS,
+    OP_UADD,
+    OP_FUNC,
+    OP_ASSIGN,
+    OP_LVAL,
+    OP_COMMA
 };
 
 enum VarType{
@@ -91,7 +97,7 @@ struct TreeNode {
     OpType opType;
 
     VarType varType;
-    int var_ptr;
+    int var_val;
 
     TreeNode(NodeType type);
 };
