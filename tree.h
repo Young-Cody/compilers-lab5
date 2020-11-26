@@ -13,7 +13,7 @@ enum NodeType{
     NODE_CONSTSTR,
     NODE_CONSTCHAR,
     NODE_CONSTDECL,
-    NODE_CONSTINITVAL,
+    NODE_INITVAL,
     NODE_VARDECL,
     NODE_BOOL,
     NODE_VAR,
@@ -77,7 +77,7 @@ struct TreeNode {
     int nodeID;
     NodeType nodeType;
 
-    TreeNode *child = nullptr;
+    TreeNode *child[4] = {nullptr, nullptr,nullptr,nullptr};
     TreeNode *sibling = nullptr;
 
     void addChild(TreeNode *);
@@ -103,7 +103,7 @@ struct TreeNode {
     OpType opType;
 
     VarType varType;
-    int var_name;
+    string var_name;
 
     TreeNode(NodeType type);
 };

@@ -3,6 +3,7 @@
     extern TreeNode * root;
     int yylex();
     int yyerror( char const * );
+    TreeNode installID(string);
 %}
 %defines
 
@@ -317,14 +318,16 @@ expr
     | ID LPAREN funcRParams RPAREN %prec FUNC{
         TreeNode *node = new TreeNode(NODE_OP);
         node->opType = OP_FUNC;
-        node->addChild($1);
+        TreeNode *t = SymbolTable[$1->var_name].first.back();
+        node->addChild(t);
         node->addChild($3);
         $$ = node;
     }
     | ID LPAREN RPAREN %prec FUNC{
         TreeNode *node = new TreeNode(NODE_OP);
         node->opType = OP_FUNC;
-        node->addChild($1);
+        TreeNode *t = SymbolTable[$1->var_name].first.back();
+        node->addChild(t);
         $$ = node;
     }
     | lVal %prec LVAL{
@@ -349,12 +352,14 @@ lVal
     :
     ID {
         TreeNode *node = new TreeNode(NODE_LVAL);
-        node->addChild($1);
+        TreeNode *t = SymbolTable[$1->var_name].first.back();
+        node->addChild(t);
         $$ = node;
     }
     ID varBracketList {
         TreeNode *node = new TreeNode(NODE_LVAL);
-        node->addChild($1);
+        TreeNode *t = SymbolTable[$1->var_name].first.back();
+        node->addChild(t);
         node->addChild($2);
         $$ = node;
     }
@@ -403,6 +408,7 @@ constDeclStmt
         {
             head->child[0]->nodeType =  NODE_CONSTVAR;
             head->child[0]->varType = $2->varType;
+            head = head->sibling;
         }
     }
     ;
@@ -419,51 +425,123 @@ constDefList
     ;
 constDef
     :
-    ID ASSIGN constInitVal {
+    ID ASSIGN initVal {
         TreeNode *node = new TreeNode(NODE_CONSTDECL);
-        node->addChild($1);
+        TreeNode *t = installID($1->var_name);
+        node->addChild(t);
         node->addChild($3);
         $$ = node;
     }
     |
-    ID constBracketList ASSIGN constInitVal {
+    ID constBracketList ASSIGN initVal {
         TreeNode *node = new TreeNode(NODE_CONSTDECL);
-        node->addChild($1);
+        TreeNode *t = installID($1->var_name);
+        node->addChild(t);
         node->addChild($2);
         node->addChild($4);
         $$ = node;
     }
 constBracketList
     :
-    expr {
+    LBRACKET expr RBRACKET{
         $$ = $1;
     }
     constBracketList LBRACKET expr RBRACKET RBRACKET {
         $$ = $1;
         $$->addSibling($3);
     }
-constInitVal
+initVal
     :
     expr {
-        TreeNode *node = new TreeNode(NODE_CONSTINIVAL);
+        TreeNode *node = new TreeNode(NODE_INItVAL);
         node->addChild($1);
         $$ = node;
     }
     |
-    LBRACE constInitValList RBRACE {
-        TreeNode *node = new TreeNode(NODE_CONSTINIVAL);
+    LBRACE initValList RBRACE {
+        TreeNode *node = new TreeNode(NODE_INITVAL);
         node->addChild($2);
         $$ = node;
     }
     ;
-constInitValList
+initValList
     :
-    constInitVal {
+    initVal {
         $$ = $1;
     }
     |
-    constInitValList COMMA constInitVal {
+    initValList COMMA initVal {
         $$ = $1;
         $$->addSibling($3);
     }
+varDeclStmt
+    :
+    type varDeclList SEMICOLON {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_VARDECL;
+        node->addChild($1);
+        node->addChild($2);
+        $$ = node;
+        TreeNode *head = $2;
+        while(head)
+        {
+            head->child[0]->nodeType =  NODE_VAR;
+            head->child[0]->varType = $1->varType;
+            head = head->sibling;
+        }
+    }
+    ;
+varDeclList
+    :
+    varDecl {
+        $$ = $1;
+    }
+    varDeclList COMMA varDecl {
+        $$ = $1;
+        $$->addSibling($3);
+    }
+    ;
+varDecl
+    :
+    ID ASSIGN initVal {
+        TreeNode *node = new TreeNode(NODE_VARDECL);
+        TreeNode *t = installID($1->var_name);
+        node->addChild(t);
+        node->addChild($3);
+        $$ = node;
+    }
+    |
+    ID constBracketList ASSIGN initVal {
+        TreeNode *node = new TreeNode(NODE_VARDECL);
+        TreeNode *t = installID($1->var_name);
+        node->addChild(t);
+        node->addChild($2);
+        node->addChild($4);
+        $$ = node;
+    }
+    |
+    ID {
+        TreeNode *node = new TreeNode(NODE_VARDECL);
+        TreeNode *t = installID($1->var_name);
+        node->addChild(t);
+        $$ = node;
+    }
+    |
+    ID constBracketList {
+        TreeNode *node = new TreeNode(NODE_VARDECL);
+        TreeNode *t = installID($1->var_name);
+        node->addChild(t);
+        node->addChild($2);
+        $$ = node;
+    }
 %%
+TreeNode* installID(string id)
+{
+    if(SymbolTable.find(id) == SymbolTable.end())
+        SymbolTable[id] = {vector<TreeNode *>(), vector<int>({0})};
+    TreeNode *node = new TreeNode(NODE_VAR);
+    node->var_name = id;
+    SymbolTable[id].first.push_back(node);
+    SymbolTable[id].second.back()++;
+    return node;
+}

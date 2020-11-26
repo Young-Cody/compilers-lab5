@@ -2,6 +2,8 @@
 %{
     #include"common.h"
     #include"main.tab.hh"
+    void begindomain();
+    void enddomain();
 %}
 
 INTEGER [0-9]+
@@ -59,8 +61,8 @@ sigcomend \n
 ";" return SEMICOLON;
 "(" return LPAREN;
 ")" return RPAREN;
-"{" return LBRACE;
-"}" return RBRACE;
+"{" {beginDomain();return LBRACE;}
+"}" {endDomain();return RBRACE;}
 "[" return LBRACKET;
 "]" return RBRACKET;
 
@@ -98,3 +100,19 @@ sigcomend \n
 <SCOMMENT>{sigcomend} {BEGIN INITIAL;}
 
 %%
+
+void begindomain()
+{
+    for(auto &i:mp)
+        i.second.second.push_back(0);
+}
+
+void endDomain()
+{
+    for(auto &i:mp)
+    {
+        for(int j = 0; j < i.second.second.back(); j++)
+            i.second.first.pop_back();
+        i.second.second.pop_back();
+    }
+}
