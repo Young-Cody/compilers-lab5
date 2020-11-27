@@ -99,6 +99,7 @@ enum VarType{
 struct TreeNode {
     int nodeID;
     NodeType nodeType;
+    int lineno;
 
     TreeNode *child[4] = {nullptr, nullptr,nullptr,nullptr};
     TreeNode *sibling = nullptr;

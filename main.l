@@ -1,4 +1,5 @@
 %option noyywrap
+%option yylineno
 %{
     #include"common.h"
     #include"main.tab.hh"
@@ -137,3 +138,5 @@ void endDomain()
         i.second.second.pop_back();
     }
 }
+
+yylineno = 0;
