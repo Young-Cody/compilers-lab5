@@ -3,7 +3,8 @@
     extern TreeNode * root;
     int yylex();
     int yyerror( char const * );
-    TreeNode installID(string);
+    TreeNode* installID(string);
+    TreeNode* newOpNode(TreeNode *, TreeNode*, OpType);
 %}
 %defines
 
@@ -20,15 +21,20 @@
 %token RETURN CONTINUE BREAK
 
 %left COMMA
-%right ASSIGN
+%right ASSIGN INCREASSIGN DECREASSIGN MULASSIGN DIVASSIGN MODASSIGN BANDASSIGN BEORASSIGN BORASSIGN SLASSIGN SRASSIGN
+%right TERNARY_CONDITIONAL
 %left OR
 %left AND
+%left BOR
+%left BEOR
+%left BAND
 %left EQUAL NOTEQUAL
 %left GREATER LESS GREATEREQUAL LESSEAUAL
+%left SL SR
 %left ADD MINUS
 %left DIV MUL MOD
-%right NOT UMINUS UADD
-%left FUNC LVAL
+%right NOT UMINUS UADD PRE_INCREMENT PRE_DECREMENT BCOMPLEMENT DEREFERENCE ADDRESS
+%left FUNC LVAL POST_INCREMENT POST_DECREMENT
 %nonassoc LOWER_THEN_ELSE
 %nonassoc ELSE
 %%
@@ -181,120 +187,88 @@ optExpr
 expr
     :
     expr ADD expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_ADD;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_ADD);
     }
     | expr MINUS expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_MINUS;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_MINUS);
     }
     | MINUS expr %prec UMINUS {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_UMINUS;
-        node->addChild($2);
-        $$ = node;
+        $$ = newOpNode($2, nullptr, OP_UMINUS);
+    }
+    | INCREMENT lVal %prec PRE_INCREMENT {
+        $$ = newOpNode($2, nullptr, OP_PRE_INCREMENT);
+    }
+    | DECREMENT lVal %prec PRE_DECREMENT {
+        $$ = newOpNode($2, nullptr, OP_PRE_DECREMENT);
+    }
+    | lVal INCREMENT %prec POST_INCREMENT {
+        $$ = newOpNode($2, nullptr, OP_POST_INCREMENT);
+    }
+    | lVal DECREMENT %prec POST_DECREMENT {
+        $$ = newOpNode($2, nullptr, OP_POST_DECREMENT);
+    }
+    | MINUS expr %prec UMINUS {
+        $$ = newOpNode($2, nullptr, OP_UMINUS);
     }
     | ADD expr %prec UADD {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_UADD;
-        node->addChild($2);
-        $$ = node;
+        $$ = newOpNode($2, nullptr, OP_UADD);
     }
     | expr MUL expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_MUL;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_MUL);
     }
     | expr DIV expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_DIV;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_DIV);
     }
     | expr MOD expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_MOD;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_MOD);
     }
     | expr EQUAL expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_EQUAL;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_EQUAL);
     }
     | expr LESS expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_LESS;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_LESS);
     }
     | expr GREATER expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_GREATER;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_GREATER);
     }
-    | expr LESSEAUAL expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_LESSEAUAL;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+    | expr LESSEQUAL expr {
+        $$ = newOpNode($1, $3, OP_LESSEQUAL);
     }
     | expr GREATEREQUAL expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_GREATEREQUAL;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_GREATEREQUAL);
     }
     | expr NOTEQUAL expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_NOTEQUAL;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_NOTEQUAL);
     }
     | expr AND expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_AND;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_AND);
     }
     | expr OR expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_OR;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_OR);
     }
     | expr COMMA expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_COMMA;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_COMMA);
+    }
+    | expr BOR expr {
+        $$ = newOpNode($1, $3, OP_BOR);
+    }
+    | expr BEOR expr {
+        $$ = newOpNode($1, $3, OP_BEOR);
+    }
+    | expr BAND expr {
+        $$ = newOpNode($1, $3, OP_BAND);
+    }
+    | expr SL expr {
+        $$ = newOpNode($1, $3, OP_SL);
+    }
+    | expr SR expr {
+        $$ = newOpNode($1, $3, OP_SR);
+    }
+    | BCOMPLEMENT expr {
+        $$ = newOpNode($2, nullptr, OP_BCOMPLEMENT);
     }
     | NOT expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = NOT;
-        node->addChild($2);
-        $$ = node;
+        $$ = newOpNode($2, nullptr, OP_NOT);
     }
     | INTEGER {$$ = $1;}
     | TRUE {
@@ -309,39 +283,55 @@ expr
     }
     | LPAREN expr RPAREN {$$ = $1;}
     | lVal ASSIGN expr {
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_ASSIGN;
-        node->addChild($1);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode($1, $3, OP_ASSIGN);
+    }
+    | lVal INCREASSIGN expr {
+        $$ = newOpNode($1, $3, OP_INCREASSIGN);
+    }
+    | lVal DECREASSIGN expr {
+        $$ = newOpNode($1, $3, OP_DECREASSIGN);
+    }
+    | lVal MULASSIGN expr {
+        $$ = newOpNode($1, $3, OP_MULASSIGN);
+    }
+    | lVal DIVASSIGN expr {
+        $$ = newOpNode($1, $3, OP_DIVASSIGN);
+    }
+    | lVal MODASSIGN expr {
+        $$ = newOpNode($1, $3, OP_MODASSIGN);
+    }
+    | lVal BANDASSIGN expr {
+        $$ = newOpNode($1, $3, OP_BANDASSIGN);
+    }
+    | lVal BEORASSIGN expr {
+        $$ = newOpNode($1, $3, OP_BEORASSIGN);
+    }
+    | lVal BORASSIGN expr {
+        $$ = newOpNode($1, $3, OP_BORASSIGN);
+    }
+    | lVal SLASSIGN expr {
+        $$ = newOpNode($1, $3, OP_SLASSIGN);
+    }
+    | lVal SRASSIGN expr {
+        $$ = newOpNode($1, $3, OP_SRASSIGN);
+    }
+    | expr QUESTION expr COLON expr %prec TERNARY_CONDITIONAL {
+        $$ = newOpNode($1, $3, OP_SRASSIGN);
+        $$->addChild($5);
     }
     | ID LPAREN funcRParams RPAREN %prec FUNC{
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_FUNC;
         TreeNode *t = SymbolTable[$1->var_name].first.back();
-        node->addChild(t);
-        node->addChild($3);
-        $$ = node;
+        $$ = newOpNode(t, $3, OP_FUNC);
     }
     | ID LPAREN RPAREN %prec FUNC{
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_FUNC;
         TreeNode *t = SymbolTable[$1->var_name].first.back();
-        node->addChild(t);
-        $$ = node;
+        $$ = newOpNode(t, nullptr, OP_FUNC);
     }
-    | lVal %prec LVAL{
-        TreeNode *node = new TreeNode(NODE_OP);
-        node->opType = OP_LVAL;
-        node->addChild($1);
-        $$ = node;
-    }
+    | lVal %prec LVAL{$$ = $1;}
     ;
 funcRParams
     :
-    expr {
-        $$ = $1;
-    }
+    expr {$$ = $1;}
     |
     funcRParams COMMA expr {
         $$ = $1;
@@ -543,5 +533,14 @@ TreeNode* installID(string id)
     node->var_name = id;
     SymbolTable[id].first.push_back(node);
     SymbolTable[id].second.back()++;
+    return node;
+}
+
+TreeNode* newOpNode(TreeNode *a, TreeNode *b, OpType ot)
+{
+    TreeNode *node = new TreeNode(NODE_OP);
+    node->ot;
+    node->addChild(a);
+    node->addChild(b);
     return node;
 }
