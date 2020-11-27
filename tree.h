@@ -19,6 +19,7 @@ enum NodeType{
     NODE_VAR,
     NODE_CONSTVAR,
     NODE_EXPR,
+    NODE_CONSTEXPR,
     NODE_TYPE,
     NODE_STMT,
     NODE_PROG,
@@ -115,6 +116,7 @@ struct TreeNode {
      * 同学们可以根据需要自己使用其他方法
     ***/
     void printNodeInfo();
+    void printType();
     void printNodeConnection();
     string nodeTypeInfo();
 

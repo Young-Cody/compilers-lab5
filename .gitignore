@@ -3,3 +3,4 @@ test/*.res
 /*.hh
 /*.out
 /*.output
+./test.cpp

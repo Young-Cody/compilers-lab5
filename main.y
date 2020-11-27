@@ -5,6 +5,7 @@
     int yyerror( char const * );
     TreeNode* installID(string);
     TreeNode* newOpNode(TreeNode *, TreeNode*, OpType);
+    TreeNode* newExprNode(TreeNode *);
 %}
 %defines
 
@@ -64,8 +65,9 @@ exprStmt
     : expr SEMICOLON {
         TreeNode *node = new TreeNode(NODE_STMT);
         node->lineno = yylineno;
+        TreeNode *e = newExprNode($1);
         node->stmtType = STMT_EXPR;
-        node->addChild($1);
+        node->addChild(e);
         $$ = node;
     }
     ;
@@ -84,8 +86,9 @@ blankStmt
 ifStmt
     : IF LPAREN expr RPAREN stmt %prec LOWER_THEN_ELSE {
         TreeNode *node = new TreeNode(NODE_STMT);
+        TreeNode *e = newExprNode($3);
         node->stmtType = STMT_IF;
-        node->addChild($3);
+        node->addChild(e);
         node->addChild($5);
         node->lineno = yylineno;
         $$ = node;
@@ -136,8 +139,9 @@ returnStmt
     ;
     | RETURN expr SEMICOLON{
         TreeNode *node = new TreeNode(NODE_STMT);
+        TreeNode *e = newExprNode($2);
         node->stmtType = STMT_RETURN;
-        node->addChild($2);
+        node->addChild(e);
         node->lineno = yylineno;
         $$ = node;
     }
@@ -145,9 +149,10 @@ returnStmt
 asgStmt
     : lVal ASSIGN expr SEMICOLON{
         TreeNode *node = new TreeNode(NODE_STMT);
+        TreeNode *e = newExprNode($3);
         node->stmtType = STMT_ASSIGN;
         node->addChild($1);
-        node->addChild($3);
+        node->addChild(e);
         node->lineno = yylineno;
         $$ = node;
     }
@@ -177,8 +182,9 @@ compoundStmt
 printfStmt
     : PRINTF LPAREN expr RPAREN {
         TreeNode *node=new TreeNode(NODE_STMT);
+        TreeNode *e = newExprNode($3);
         node->stmtType=STMT_PRINTF;
-        node->addChild($3);
+        node->addChild(e);
         node->lineno = yylineno;
         $$=node;
     }
@@ -186,18 +192,20 @@ printfStmt
 scanfStmt
     : SCANF LPAREN expr RPAREN {
         TreeNode *node=new TreeNode(NODE_STMT);
+        TreeNode *e = newExprNode($3);
         node->stmtType=STMT_SCANF;
-        node->addChild($3);
+        node->addChild(e);
         node->lineno = yylineno;
         $$=node;
     }
     ;
 optExpr
     :
-    expr {$$=$1;}
+    expr {
+        TreeNode *e = newExprNode($1);
+        $$=e;}
     | {
-        TreeNode *node = new TreeNode(NODE_EXPR);
-        node->lineno = yylineno;
+        TreeNode *e = newExprNode(nullptr);
         $$ = node;
     }
     ;
@@ -350,11 +358,14 @@ expr
     ;
 funcRParams
     :
-    expr {$$ = $1;}
+    expr {
+        TreeNode *e = newExprNode($1);
+        $$ = e;}
     |
     funcRParams COMMA expr {
+        TreeNode *e = newExprNode($3);
         $$ = $1;
-        $$->addSibling($3);
+        $$->addSibling(e);
     }
     ;
 lVal
@@ -378,12 +389,14 @@ lVal
 varBracketList
     :
     LBRACKET expr RBRACKET {
-        $$ = $1;
+        TreeNode *e = newExprNode($2);
+        $$ = e;
     }
     |
     varBracketList LBRACKET expr RBRACKET {
         $$ = $1;
-        $$->addSibling($3);
+        TreeNode *e = newExprNode($1);
+        $$->addSibling(e);
     }
     ;
 type
@@ -464,18 +477,25 @@ constDef
 constBracketList
     :
     LBRACKET expr RBRACKET{
-        $$ = $1;
+        TreeNode *ce = new TreeNode(NODE_CONSTEXPR);
+        ce->addChild($2);
+        ce->lineno = $2->lineno;
+        $$ = e;
     }
     constBracketList LBRACKET expr RBRACKET RBRACKET {
+        TreeNode *ce = new TreeNode(NODE_CONSTEXPR);
+        ce->addChild($3);
+        ce->lineno = $3->lineno;
         $$ = $1;
-        $$->addSibling($3);
+        $$->addSibling(e);
     }
     ;
 initVal
     :
     expr {
-        TreeNode *node = new TreeNode(NODE_INItVAL);
-        node->addChild($1);
+        TreeNode *node = new TreeNode(NODE_INITVAL);
+        TreeNode *e = newExprNode($1);
+        node->addChild(e);
         node->lineno = yylineno;
         $$ = node;
     }
@@ -584,5 +604,13 @@ TreeNode* newOpNode(TreeNode *a, TreeNode *b, OpType ot)
     node->addChild(a);
     node->addChild(b);
     node->lineno = yylineno;
+    return node;
+}
+
+TreeNode* newExprNode(TreeNode *t)
+{
+    TreeNode *node = new TreeNode(NODE_EXPR);
+    node->addChild(t);
+    node->lineno = t->lineno;
     return node;
 }
