@@ -6,8 +6,10 @@
 #include <vector>
 using std::map;
 using std::vector;
+using std::pair;
 #define YYSTYPE TreeNode *
 
-map<string, pair<vector<TreeNode *>, int> SymbolTable;
+extern map<string, pair<vector<TreeNode *>, vector<int>>> SymbolTable;
+extern int lineno;
 
 #endif

@@ -1,11 +1,21 @@
 #include"tree.h"
 
+TreeNode::TreeNode(NodeType type)
+{
+    nodeType = type;
+}
+
 void TreeNode::addSibling(TreeNode * t)
 {
-    TreeNode *p = sibling;
-    while(p->sibling)
-        p = p->sibling;
-    p->sibling = t;
+    if(!sibling) sibling = t;
+    else
+    {
+        TreeNode *p = sibling;
+        while(p->sibling)
+            p = p->sibling;
+        p->sibling = t;
+    }
+    
 }
 
 void TreeNode::addChild(TreeNode *t)
@@ -33,6 +43,7 @@ void TreeNode::genNodeId()
 void TreeNode::printAST()
 {
     printNodeInfo();
+    cout<<'\n';
     for(int i = 0; child[i] && i < 4; i++)
         child[i]->printAST();
     if(sibling)
@@ -51,14 +62,21 @@ void TreeNode::printType()
 {
     switch (nodeType)
     {
-    case NODE_CONSTINT:
-        printf("const int    value: %s", int_val);
-        break;
-    case NODE_CONSTSTR:
-        printf("const string    value: %s", const_str_val);
-        break;
-    case NODE_CONSTCHAR:
-        printf("const char    value: %c", const_char_val);
+    case NODE_CONST:
+        switch (varType)
+        {
+        case VAR_INTEGER:
+            printf("const int    value:%d", int_val);
+            break;
+        case VAR_CHAR:
+            printf("const char    value:%c", int_val);
+            break;
+        case VAR_STR:
+            printf("const str    value:%s", const_str_val.c_str());
+            break;
+        default:
+            break;
+        }
         break;
     case NODE_CONSTDECL:
         printf("const declare");
@@ -91,7 +109,7 @@ void TreeNode::printType()
         default:
             break;
         }
-        printf("    name: %s    ", var_name);
+        printf("    name: %s", var_name.c_str());
         break;
     case NODE_CONSTVAR:
         printf("const variable    type: ");
@@ -112,13 +130,12 @@ void TreeNode::printType()
         default:
             break;
         }
-        printf("    ");
         break;
     case NODE_EXPR:
-        printf("expression    ");
+        printf("expression");
         break;
     case NODE_CONSTEXPR:
-        printf("const expression    ");
+        printf("const expression");
         break;
     case NODE_TYPE:
         printf("type: ");
@@ -139,7 +156,6 @@ void TreeNode::printType()
         default:
             break;
         }
-        printf("    ");
         break;
     case NODE_STMT:
         switch (stmtType)
@@ -158,9 +174,6 @@ void TreeNode::printType()
             break;
         case STMT_VARDECL:
             printf("statement_variable_declare");
-            break;
-        case STMT_ASSIGN:
-            printf("statement_assign");
             break;
         case STMT_PRINTF:
             printf("statement_printf");
@@ -189,15 +202,14 @@ void TreeNode::printType()
         default:
             break;
         }
-        printf("    ");
         break;
     case NODE_PROG:
-        printf("program"    );
+        printf("program");
         break;
     case NODE_OP:
+        printf("operator ");
         switch (opType)
         {
-            printf("operator ");
         case OP_EQUAL:
             printf("==");
             break;
@@ -229,7 +241,7 @@ void TreeNode::printType()
             printf("/");
             break;
         case OP_MOD:
-            printf("%");
+            cout<<"%";
             break;
         case OP_AND:
             printf("&&");
@@ -268,7 +280,7 @@ void TreeNode::printType()
             printf("/=");
             break;
         case OP_MODASSIGN:
-            printf("%=");
+            cout<<"%=";
             break;
         case OP_BANDASSIGN:
             printf("&=");
@@ -331,22 +343,37 @@ void TreeNode::printType()
         printf("    ");
         break;
     case NODE_LVAL:
-        printf("left value    ");
+        printf("left value");
         break;
     default:
         break;
     }
+    printf("    ");
 }
 
 void TreeNode::printNodeConnection()
 {
     if(child[0])
-        printf("child: ");
-    for(int i = 0; child[i] && i < 4; i++)
-        printf("@%d ",child[i]->nodeID);
-    if(sibling)
     {
-        printf("sibling: ");
-        printf("@%d ",sibling->nodeID);
+        printf("child: ");
+        for(int i = 0; child[i] && i < 4; i++)
+            printf("@%d ",child[i]->nodeID);
+        TreeNode *p = sibling;
+        while(p)
+        {
+            printf("@%d ",p->nodeID);
+            p = p->sibling;
+        }
+    }
+    else
+    {
+        if(sibling)
+            printf("child: ");
+        TreeNode *p = sibling;
+        while(p)
+        {
+            printf("@%d ",p->nodeID);
+            p = p->sibling;
+        }
     }
 }

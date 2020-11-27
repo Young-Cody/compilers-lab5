@@ -1,26 +1,21 @@
 %option noyywrap
-%option yylineno
 %{
     #include"common.h"
     #include"main.tab.hh"
     void begindomain();
     void enddomain();
+    int lineno = 1;
+    map<string, pair<vector<TreeNode *>, vector<int>>> SymbolTable;
 %}
 
 INTEGER [0-9]+
 ID [[:alpha:]_][[:alpha:][:digit:]_]*
-CONSTSTR \"[.|\n]*\"
-CONSTCHAR '[.|\n]'
-EOL (\r\n|\n)
+CONSTSTR \"(.|\n)*\"
+CONSTCHAR \'(.|\n)?\'
+EOL (\r\n|\n|\r)
 WHITE [\t ]
-mulcombeg "/*"
-mulcomele .|\n
-mulcomend "*/"
-sigcombeg "//"
-sigcomele .
-sigcomend \n
-%x MCOMMENT
-%x SCOMMENT
+BLOCKCOMMENT \/\*([^\*^\/]*|[\*^\/*]*|[^\**\/]*)*\*\/
+LINECOMMENT \/\/[^\n]*
 %%
 
 "true" return TRUE;
@@ -41,7 +36,7 @@ sigcomend \n
 "printf" return PRINTF;
 "scanf" return SCANF;
 
-"++" return INCRENMENT;
+"++" return INCREMENT;
 "--" return DECREMENT;
 "&" return ADDRESS;
 "=" return ASSIGN;
@@ -83,60 +78,61 @@ sigcomend \n
 ";" return SEMICOLON;
 "(" return LPAREN;
 ")" return RPAREN;
-"{" {beginDomain();return LBRACE;}
-"}" {endDomain();return RBRACE;}
+"{" {begindomain();return LBRACE;}
+"}" {enddomain();return RBRACE;}
 "[" return LBRACKET;
 "]" return RBRACKET;
 
 {INTEGER} {
-    TreeNode *node = new TreeNode(NODE_CONSTINT);
+    TreeNode *node = new TreeNode(NODE_CONST);
+    node->lineno = yylineno;
+    node->varType = VAR_INTEGER;
     node->int_val = atoi(yytext);
     yylval = node;
     return INTEGER;
 }
 {ID} {
     TreeNode *node = new TreeNode(NODE_VAR);
+    node->lineno = yylineno;
     node->var_name = yytext;
     yylval = node;
     return ID;
 }
 {CONSTSTR} {
-    TreeNode *node = new TreeNode(NODE_CONSTSTR);
+    TreeNode *node = new TreeNode(NODE_CONST);
+    node->lineno = yylineno;
+    node->varType = VAR_STR;
     node->const_str_val = yytext;
     yylval = node;
     return CONSTSTR;
 }
 {CONSTCHAR} {
-    TreeNode *node = new TreeNode(NODE_CONSTCHAR);
-    node->const_char_val = yytext;
+    TreeNode *node = new TreeNode(NODE_CONST);
+    node->lineno = yylineno;
+    node->varType = VAR_CHAR;
+    node->int_val = yytext[1];
     yylval = node;
     return CONSTCHAR;
 }
-{EOL}
+{EOL} yylineno++;
 {WHITE}
-{mulcombeg} {BEGIN MCOMMENT;}
-<MCOMMENT>{mulcomele} {}
-<MCOMMENT>{mulcomend} {BEGIN INITIAL;}
-{sigcombeg} {BEGIN SCOMMENT;}
-<SCOMMENT>{sigcomele} {}
-<SCOMMENT>{sigcomend} {BEGIN INITIAL;}
+{BLOCKCOMMENT}
+{LINECOMMENT}
 
 %%
 
 void begindomain()
 {
-    for(auto &i:mp)
+    for(auto &i:SymbolTable)
         i.second.second.push_back(0);
 }
 
-void endDomain()
+void enddomain()
 {
-    for(auto &i:mp)
+    for(auto &i:SymbolTable)
     {
         for(int j = 0; j < i.second.second.back(); j++)
             i.second.first.pop_back();
         i.second.second.pop_back();
     }
 }
-
-yylineno = 0;
