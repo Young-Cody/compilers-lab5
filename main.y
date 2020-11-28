@@ -73,8 +73,8 @@ exprStmt
     }
     ;
 declStmt
-    : constDeclStmt {$$ = $1;}
-    | varDeclStmt {$$ = $1;}
+    : constDeclStmt{$$=$1;}
+    | varDeclStmt{$$=$1;}
     ;
 blankStmt
     : SEMICOLON {
@@ -161,6 +161,17 @@ forStmt
         node->lineno = $3->lineno;
         $$ = node;
     }
+    |
+    FOR LPAREN declStmt optExpr SEMICOLON optExpr RPAREN stmt {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_FOR;
+        node->addChild($3);
+        node->addChild($4);
+        node->addChild($6);
+        node->addChild($8);
+        node->lineno = $3->lineno;
+        $$ = node;
+    }
     ;
 compoundStmt
     : LBRACE stmts RBRACE {
@@ -172,22 +183,20 @@ compoundStmt
     }
     ;
 printfStmt
-    : PRINTF LPAREN expr RPAREN SEMICOLON{
+    : PRINTF LPAREN funcRParams RPAREN SEMICOLON{
         TreeNode *node=new TreeNode(NODE_STMT);
-        TreeNode *e = newExprNode($3);
         node->stmtType=STMT_PRINTF;
-        node->addChild(e);
-        node->lineno = e->lineno;
+        node->addChild($3);
+        node->lineno = $3->lineno;
         $$=node;
     }
     ;
 scanfStmt
-    : SCANF LPAREN expr RPAREN SEMICOLON{
+    : SCANF LPAREN funcRParams RPAREN SEMICOLON{
         TreeNode *node=new TreeNode(NODE_STMT);
-        TreeNode *e = newExprNode($3);
         node->stmtType=STMT_SCANF;
-        node->addChild(e);
-        node->lineno = e->lineno;
+        node->addChild($3);
+        node->lineno = $3->lineno;
         $$=node;
     }
     ;
@@ -280,9 +289,6 @@ expr
     | expr OR expr {
         $$ = newOpNode($1, $3, OP_OR);
     }
-    | expr COMMA expr {
-        $$ = newOpNode($1, $3, OP_COMMA);
-    }
     | expr BOR expr {
         $$ = newOpNode($1, $3, OP_BOR);
     }
@@ -311,13 +317,15 @@ expr
         node->lineno = yylineno;
         $$ = node;
     }
+    | CONSTSTR {$$ = $1;}
+    | CONSTCHAR {$$ = $1;}
     | FALSE {
         TreeNode *node = new TreeNode(NODE_BOOL);
         node->bool_val = false;
         node->lineno = yylineno;
         $$ = node;
     }
-    | LPAREN expr RPAREN {$$ = $1;}
+    | LPAREN expr RPAREN { $$ = newExprNode($2);}
     | lVal ASSIGN expr {
         $$ = newOpNode($1, $3, OP_ASSIGN);
     }
@@ -363,7 +371,7 @@ expr
         TreeNode *t = SymbolTable[$1->var_name].first.back();
         $$ = newOpNode(t, nullptr, OP_FUNC);
     }
-    | lVal{$$ = $1;}
+    | lVal %prec LVAL{$$ = $1;}
     ;
 funcRParams
     :
@@ -379,7 +387,7 @@ funcRParams
     ;
 lVal
     :
-    ID varBracketList {
+    ID bracketList {
         TreeNode *node = new TreeNode(NODE_LVAL);
         TreeNode *t = SymbolTable[$1->var_name].first.back();
         node->addChild(t);
@@ -390,10 +398,26 @@ lVal
             node->lineno = yylineno;
         $$ = node;
     }
+    | MUL ID %prec DEREFERENCE{
+        TreeNode *node = new TreeNode(NODE_LVAL);
+        TreeNode *t = SymbolTable[$2->var_name].first.back();
+        TreeNode *op = newOpNode(t, nullptr, OP_DEREFERENCE);
+        node->addChild(op);
+        node->lineno = yylineno;
+        $$ = node;
+    }
+    | BAND ID %prec ADDRESS {
+        TreeNode *node = new TreeNode(NODE_LVAL);
+        TreeNode *t = SymbolTable[$2->var_name].first.back();
+        TreeNode *op = newOpNode(t, nullptr, OP_ADDRESS);
+        node->addChild(op);
+        node->lineno = yylineno;
+        $$ = node;
+    }
     ;
-varBracketList
+bracketList
     :
-    LBRACKET expr RBRACKET varBracketList{
+    LBRACKET expr RBRACKET bracketList{
         TreeNode *e = newExprNode($2);
         $$ = e;
         $$->addSibling($4);
@@ -430,7 +454,7 @@ constDeclStmt
     :
     CONST type constDefList SEMICOLON {
         TreeNode *node = new TreeNode(NODE_STMT);
-        node->stmtType = STMT_CONSTDECL;
+        node->stmtType = STMT_DECL;
         node->addChild($2);
         node->addChild($3);
         node->lineno = $2->lineno;
@@ -454,22 +478,10 @@ constDefList
         $$ = $1;
     }
     ;
-constBracketList
-    :
-    LBRACKET expr RBRACKET constBracketList {
-        TreeNode *ce = new TreeNode(NODE_CONSTEXPR);
-        TreeNode *e = newExprNode($2);
-        ce->addChild(e);
-        ce->lineno = e->lineno;
-        $$ = ce;
-        $$->addSibling($4);
-    }
-    | {$$ = nullptr;}
-    ;
 constDef
     :
-    ID constBracketList ASSIGN initVal {
-        TreeNode *node = new TreeNode(NODE_CONSTDECL);
+    ID bracketList ASSIGN initVal {
+        TreeNode *node = new TreeNode(NODE_DECL);
         TreeNode *t = installID($1);
         node->addChild(t);
         if($2) node->addChild($2);
@@ -509,7 +521,7 @@ varDeclStmt
     :
     type varDeclList SEMICOLON {
         TreeNode *node = new TreeNode(NODE_STMT);
-        node->stmtType = STMT_VARDECL;
+        node->stmtType = STMT_DECL;
         node->addChild($1);
         node->addChild($2);
         node->lineno = $1->lineno;
@@ -536,8 +548,8 @@ varDeclList
     ;
 varDecl
     :
-    ID constBracketList ASSIGN initVal {
-        TreeNode *node = new TreeNode(NODE_VARDECL);
+    ID bracketList ASSIGN initVal {
+        TreeNode *node = new TreeNode(NODE_DECL);
         TreeNode *t = installID($1);
         node->addChild(t);
         if($2) node->addChild($2);
@@ -546,8 +558,8 @@ varDecl
         $$ = node;
     }
     |
-    ID constBracketList {
-        TreeNode *node = new TreeNode(NODE_VARDECL);
+    ID bracketList {
+        TreeNode *node = new TreeNode(NODE_DECL);
         TreeNode *t = installID($1);
         node->addChild(t);
         if($2) node->addChild($2);
@@ -559,8 +571,9 @@ funcDef
     :
     type ID LPAREN optFuncFParams RPAREN compoundStmt {
         TreeNode *node = new TreeNode(NODE_FUNCDEF);
+        TreeNode *id = installID($2);
         node->addChild($1);
-        node->addChild($2);
+        node->addChild(id);
         if($4) node->addChild($4);
         node->addChild($6);
         node->lineno = $1->lineno;

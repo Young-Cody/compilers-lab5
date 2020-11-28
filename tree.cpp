@@ -78,14 +78,11 @@ void TreeNode::printType()
             break;
         }
         break;
-    case NODE_CONSTDECL:
-        printf("const declare");
+    case NODE_DECL:
+        printf("declare");
         break;
     case NODE_INITVAL:
         printf("initiate value list");
-        break;
-    case NODE_VARDECL:
-        printf("variable declare");
         break;
     case NODE_FUNCDEF:
         printf("function define");
@@ -140,9 +137,6 @@ void TreeNode::printType()
     case NODE_EXPR:
         printf("expression");
         break;
-    case NODE_CONSTEXPR:
-        printf("const expression");
-        break;
     case NODE_TYPE:
         printf("type: ");
         switch (varType)
@@ -175,11 +169,8 @@ void TreeNode::printType()
         case STMT_FOR:
             printf("statement_for");
             break;
-        case STMT_CONSTDECL:
-            printf("statement_const_declare");
-            break;
-        case STMT_VARDECL:
-            printf("statement_variable_declare");
+        case STMT_DECL:
+            printf("statement_declare");
             break;
         case STMT_PRINTF:
             printf("statement_printf");
@@ -342,12 +333,11 @@ void TreeNode::printType()
         case OP_POST_DECREMENT:
             printf("post --");
             break;
-        
         case OP_DEREFERENCE:
-            printf("*");
+            printf("dereference *");
             break;
         case OP_ADDRESS:
-            printf("&");
+            printf("address &");
             break;
         default:
             break;

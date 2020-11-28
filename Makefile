@@ -4,9 +4,9 @@ main.tab.cc: main.y
 	bison -o main.tab.cc -v main.y
 lex.yy.cc: main.l
 	flex -o lex.yy.cc main.l
-main:
+main:main.tab.cc lex.yy.cc
 	g++ $(shell ls *.cpp *.cc) -o main.out
-run: lex.yy.cc main.tab.cc main
+run: main
 	./main.out
 test:main
 	for file in $(basename $(shell find test/*.c)); \

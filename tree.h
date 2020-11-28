@@ -10,16 +10,14 @@ using std::string;
 
 enum NodeType{
     NODE_CONST,
-    NODE_CONSTDECL,
     NODE_INITVAL,
-    NODE_VARDECL,
+    NODE_DECL,
     NODE_FUNCDEF,
     NODE_FUNCFPARAM,
     NODE_BOOL,
     NODE_VAR,
     NODE_CONSTVAR,
     NODE_EXPR,
-    NODE_CONSTEXPR,
     NODE_TYPE,
     NODE_STMT,
     NODE_PROG,
@@ -31,8 +29,7 @@ enum StmtType{
     STMT_IF,
     STMT_WHILE,
     STMT_FOR,
-    STMT_CONSTDECL,
-    STMT_VARDECL,
+    STMT_DECL,
     STMT_PRINTF,
     STMT_SCANF,
     STMT_MAIN,
@@ -86,7 +83,6 @@ enum OpType{
     OP_PRE_DECREMENT,
     OP_POST_INCREMENT,
     OP_POST_DECREMENT,
-
     OP_DEREFERENCE,
     OP_ADDRESS
 };

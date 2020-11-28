@@ -9,8 +9,8 @@
 
 INTEGER [0-9]+
 ID [[:alpha:]_][[:alpha:][:digit:]_]*
-CONSTSTR \"(.|\n)*\"
-CONSTCHAR \'(.|\n)?\'
+CONSTSTR \".*\"
+CONSTCHAR \'.?\'
 EOL (\r\n|\n|\r)
 WHITE [\t ]
 BLOCKCOMMENT \/\*([^\*^\/]*|[\*^\/*]*|[^\**\/]*)*\*\/
@@ -38,7 +38,6 @@ LINECOMMENT \/\/[^\n]*
 
 "++" return INCREMENT;
 "--" return DECREMENT;
-"&" return ADDRESS;
 "=" return ASSIGN;
 "+=" return INCREASSIGN;
 "-=" return DECREASSIGN;
