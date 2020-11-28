@@ -3,7 +3,7 @@
     extern TreeNode * root;
     int yylex();
     int yyerror( char const * );
-    TreeNode* installID(string);
+    TreeNode* installID(TreeNode *);
     TreeNode* newOpNode(TreeNode *, TreeNode*, OpType);
     TreeNode* newExprNode(TreeNode *);
 %}
@@ -40,7 +40,7 @@
 %nonassoc ELSE
 %%
 program
-    : stmts {root=new TreeNode(NODE_PROG);root->lineno = lineno;root->addChild($1);}
+    : stmts {root=new TreeNode(NODE_PROG);root->lineno = $1->lineno;root->addChild($1);}
     ;
 stmts
     : stmt {$$=$1;}
@@ -63,8 +63,8 @@ stmt
 exprStmt
     : expr SEMICOLON {
         TreeNode *node = new TreeNode(NODE_STMT);
-        node->lineno = lineno;
         TreeNode *e = newExprNode($1);
+        node->lineno = e->lineno;
         node->stmtType = STMT_EXPR;
         node->addChild(e);
         $$ = node;
@@ -77,7 +77,7 @@ declStmt
 blankStmt
     : SEMICOLON {
         TreeNode *node = new TreeNode(NODE_STMT);
-        node->lineno = lineno;
+        node->lineno = yylineno;
         node->stmtType = STMT_BLANK;
         $$ = node;
     }
@@ -89,7 +89,7 @@ ifStmt
         node->stmtType = STMT_IF;
         node->addChild(e);
         node->addChild($5);
-        node->lineno = lineno;
+        node->lineno = e->lineno;
         $$ = node;
     }
     | IF LPAREN expr RPAREN stmt ELSE stmt {
@@ -99,7 +99,7 @@ ifStmt
         node->addChild(e);
         node->addChild($5);
         node->addChild($7);
-        node->lineno = lineno;
+        node->lineno = e->lineno;
         $$ = node;
     }
     ;
@@ -110,7 +110,7 @@ wlStmt
         node->stmtType = STMT_WHILE;
         node->addChild(e);
         node->addChild($5);
-        node->lineno = lineno;
+        node->lineno = e->lineno;
         $$ = node;
     }
     ;
@@ -118,7 +118,7 @@ breakStmt
     : BREAK SEMICOLON {
         TreeNode *node = new TreeNode(NODE_STMT);
         node->stmtType = STMT_BREAK;
-        node->lineno = lineno;
+        node->lineno = yylineno;
         $$ = node;
     }
     ;
@@ -126,7 +126,7 @@ continueStmt
     : CONTINUE SEMICOLON {
         TreeNode *node = new TreeNode(NODE_STMT);
         node->stmtType = STMT_CONTINUE;
-        node->lineno = lineno;
+        node->lineno = yylineno;
         $$ = node;
     }
     ;
@@ -134,7 +134,7 @@ returnStmt
     : RETURN SEMICOLON {
         TreeNode *node = new TreeNode(NODE_STMT);
         node->stmtType = STMT_RETURN;
-        node->lineno = lineno;
+        node->lineno = yylineno;
         $$ = node;
     }
     ;
@@ -143,7 +143,7 @@ returnStmt
         TreeNode *e = newExprNode($2);
         node->stmtType = STMT_RETURN;
         node->addChild(e);
-        node->lineno = lineno;
+        node->lineno = yylineno;
         $$ = node;
     }
     ;
@@ -156,7 +156,7 @@ forStmt
         node->addChild($5);
         node->addChild($7);
         node->addChild($9);
-        node->lineno = lineno;
+        node->lineno = $3->lineno;
         $$ = node;
     }
     ;
@@ -165,27 +165,27 @@ compoundStmt
         TreeNode *node = new TreeNode(NODE_STMT);
         node->stmtType = STMT_COMPOUND;
         node->addChild($2);
-        node->lineno = lineno;
+        node->lineno = $2->lineno;
         $$ = node;
     }
     ;
 printfStmt
-    : PRINTF LPAREN expr RPAREN {
+    : PRINTF LPAREN expr RPAREN SEMICOLON{
         TreeNode *node=new TreeNode(NODE_STMT);
         TreeNode *e = newExprNode($3);
         node->stmtType=STMT_PRINTF;
         node->addChild(e);
-        node->lineno = lineno;
+        node->lineno = e->lineno;
         $$=node;
     }
     ;
 scanfStmt
-    : SCANF LPAREN expr RPAREN {
+    : SCANF LPAREN expr RPAREN SEMICOLON{
         TreeNode *node=new TreeNode(NODE_STMT);
         TreeNode *e = newExprNode($3);
         node->stmtType=STMT_SCANF;
         node->addChild(e);
-        node->lineno = lineno;
+        node->lineno = e->lineno;
         $$=node;
     }
     ;
@@ -286,13 +286,13 @@ expr
     | TRUE {
         TreeNode *node = new TreeNode(NODE_BOOL);
         node->bool_val = true;
-        node->lineno = lineno;
+        node->lineno = yylineno;
         $$ = node;
     }
     | FALSE {
         TreeNode *node = new TreeNode(NODE_BOOL);
         node->bool_val = false;
-        node->lineno = lineno;
+        node->lineno = yylineno;
         $$ = node;
     }
     | LPAREN expr RPAREN {$$ = $1;}
@@ -341,7 +341,7 @@ expr
         TreeNode *t = SymbolTable[$1->var_name].first.back();
         $$ = newOpNode(t, nullptr, OP_FUNC);
     }
-    | lVal %prec LVAL{$$ = $1;}
+    | lVal{$$ = $1;}
     ;
 funcRParams
     :
@@ -357,58 +357,50 @@ funcRParams
     ;
 lVal
     :
-    ID {
-        TreeNode *node = new TreeNode(NODE_LVAL);
-        TreeNode *t = SymbolTable[$1->var_name].first.back();
-        node->addChild(t);
-        node->lineno = lineno;
-        $$ = node;
-    }
     ID varBracketList {
         TreeNode *node = new TreeNode(NODE_LVAL);
         TreeNode *t = SymbolTable[$1->var_name].first.back();
         node->addChild(t);
-        node->addChild($2);
-        node->lineno = lineno;
+        if($2) node->addChild($2);
+        if($2)
+            node->lineno = $2->lineno;
+        else
+            node->lineno = yylineno;
         $$ = node;
     }
     ;
 varBracketList
     :
-    LBRACKET expr RBRACKET {
+    LBRACKET expr RBRACKET varBracketList{
         TreeNode *e = newExprNode($2);
         $$ = e;
+        $$->addSibling($4);
     }
-    |
-    varBracketList LBRACKET expr RBRACKET {
-        $$ = $1;
-        TreeNode *e = newExprNode($1);
-        $$->addSibling(e);
-    }
+    | {$$ = nullptr;}
     ;
 type
     : INT {
         TreeNode *node=new TreeNode(NODE_TYPE);
         node->varType=VAR_INTEGER;
-        node->lineno = lineno;
+        node->lineno = yylineno;
         $$=node; 
     }
     | VOID {
         TreeNode *node=new TreeNode(NODE_TYPE);
         node->varType=VAR_VOID;
-        node->lineno = lineno;
+        node->lineno = yylineno;
         $$=node;         
     }
     | BOOL {
         TreeNode *node=new TreeNode(NODE_TYPE);
         node->varType=VAR_BOOL;
-        node->lineno = lineno;
+        node->lineno = yylineno;
         $$=node;         
     }
     | CHAR {
         TreeNode *node=new TreeNode(NODE_TYPE);
         node->varType=VAR_CHAR;
-        node->lineno = lineno;
+        node->lineno = yylineno;
         $$=node;         
     }
     ;
@@ -419,7 +411,7 @@ constDeclStmt
         node->stmtType = STMT_CONSTDECL;
         node->addChild($2);
         node->addChild($3);
-        node->lineno = lineno;
+        node->lineno = $2->lineno;
         TreeNode *head = $3;
         while(head)
         {
@@ -444,8 +436,9 @@ constBracketList
     :
     LBRACKET expr RBRACKET constBracketList {
         TreeNode *ce = new TreeNode(NODE_CONSTEXPR);
-        ce->addChild($2);
-        ce->lineno = $2->lineno;
+        TreeNode *e = newExprNode($2);
+        ce->addChild(e);
+        ce->lineno = e->lineno;
         $$ = ce;
         $$->addSibling($4);
     }
@@ -455,11 +448,11 @@ constDef
     :
     ID constBracketList ASSIGN initVal {
         TreeNode *node = new TreeNode(NODE_CONSTDECL);
-        TreeNode *t = installID($1->var_name);
+        TreeNode *t = installID($1);
         node->addChild(t);
         if($2) node->addChild($2);
         node->addChild($4);
-        node->lineno = lineno;
+        node->lineno = $1->lineno;
         $$ = node;
     }
     ;
@@ -469,26 +462,25 @@ initVal
         TreeNode *node = new TreeNode(NODE_INITVAL);
         TreeNode *e = newExprNode($1);
         node->addChild(e);
-        node->lineno = lineno;
+        node->lineno = $1->lineno;
         $$ = node;
     }
     |
     LBRACE initValList RBRACE {
         TreeNode *node = new TreeNode(NODE_INITVAL);
         node->addChild($2);
-        node->lineno = lineno;
+        node->lineno = $2->lineno;
         $$ = node;
     }
     ;
 initValList
     :
-    initVal {
-        $$ = $1;
+    initValList COMMA initVal{
+    $$ = $1;
+    $$->addSibling($3);
     }
-    |
-    initValList COMMA initVal {
+    | initVal {
         $$ = $1;
-        $$->addSibling($3);
     }
     ;
 varDeclStmt
@@ -498,7 +490,7 @@ varDeclStmt
         node->stmtType = STMT_VARDECL;
         node->addChild($1);
         node->addChild($2);
-        node->lineno = lineno;
+        node->lineno = $1->lineno;
         $$ = node;
         TreeNode *head = $2;
         while(head)
@@ -524,33 +516,33 @@ varDecl
     :
     ID constBracketList ASSIGN initVal {
         TreeNode *node = new TreeNode(NODE_VARDECL);
-        TreeNode *t = installID($1->var_name);
+        TreeNode *t = installID($1);
         node->addChild(t);
         if($2) node->addChild($2);
         node->addChild($4);
-        node->lineno = lineno;
+        node->lineno = $1->lineno;
         $$ = node;
     }
     |
     ID constBracketList {
         TreeNode *node = new TreeNode(NODE_VARDECL);
-        TreeNode *t = installID($1->var_name);
+        TreeNode *t = installID($1);
         node->addChild(t);
         if($2) node->addChild($2);
-        node->lineno = lineno;
+        node->lineno = $1->lineno;
         $$ = node;
     }
     ;
 %%
-TreeNode* installID(string id)
+TreeNode* installID(TreeNode *t)
 {
-    if(SymbolTable.find(id) == SymbolTable.end())
-        SymbolTable[id] = {vector<TreeNode *>(), vector<int>({0})};
+    if(SymbolTable.find(t->var_name) == SymbolTable.end())
+        SymbolTable[t->var_name] = {vector<TreeNode *>(), vector<int>({0})};
     TreeNode *node = new TreeNode(NODE_VAR);
-    node->var_name = id;
-    node->lineno = lineno;
-    SymbolTable[id].first.push_back(node);
-    SymbolTable[id].second.back()++;
+    node->var_name = t->var_name;
+    node->lineno = t->lineno;
+    SymbolTable[t->var_name].first.push_back(node);
+    SymbolTable[t->var_name].second.back()++;
     return node;
 }
 
@@ -560,7 +552,7 @@ TreeNode* newOpNode(TreeNode *a, TreeNode *b, OpType ot)
     node->opType = ot;
     node->addChild(a);
     node->addChild(b);
-    node->lineno = lineno;
+    node->lineno = yylineno;
     return node;
 }
 
@@ -568,6 +560,9 @@ TreeNode* newExprNode(TreeNode *t)
 {
     TreeNode *node = new TreeNode(NODE_EXPR);
     node->addChild(t);
-    node->lineno = t->lineno;
+    if(t)
+        node->lineno = t->lineno;
+    else
+        node->lineno = yylineno;
     return node;
 }

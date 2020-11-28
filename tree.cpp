@@ -358,22 +358,12 @@ void TreeNode::printNodeConnection()
         printf("child: ");
         for(int i = 0; child[i] && i < 4; i++)
             printf("@%d ",child[i]->nodeID);
-        TreeNode *p = sibling;
-        while(p)
-        {
-            printf("@%d ",p->nodeID);
-            p = p->sibling;
-        }
-    }
-    else
-    {
         if(sibling)
-            printf("child: ");
-        TreeNode *p = sibling;
-        while(p)
-        {
-            printf("@%d ",p->nodeID);
-            p = p->sibling;
-        }
+            printf("@%d ",sibling->nodeID);
+    }
+    else if(sibling)
+    {
+        printf("child: ");
+        printf("@%d ",sibling->nodeID);
     }
 }

@@ -4,7 +4,6 @@
     #include"main.tab.hh"
     void begindomain();
     void enddomain();
-    int lineno = 1;
     map<string, pair<vector<TreeNode *>, vector<int>>> SymbolTable;
 %}
 

@@ -8,7 +8,7 @@ main:
 	g++ $(shell ls *.cpp *.cc) -o main.out
 run: lex.yy.cc main.tab.cc main
 	./main.out
-test:run
+test:main
 	for file in $(basename $(shell find test/*.c)); \
 	do \
 		./main.out <$$file.c >$$file.res; \

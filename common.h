@@ -10,6 +10,6 @@ using std::pair;
 #define YYSTYPE TreeNode *
 
 extern map<string, pair<vector<TreeNode *>, vector<int>>> SymbolTable;
-extern int lineno;
+extern int yylineno;
 
 #endif
