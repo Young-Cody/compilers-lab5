@@ -87,6 +87,12 @@ void TreeNode::printType()
     case NODE_VARDECL:
         printf("variable declare");
         break;
+    case NODE_FUNCDEF:
+        printf("function define");
+        break;
+    case NODE_FUNCFPARAM:
+        printf("function form parameter");
+        break;
     case NODE_BOOL:
         printf("bool    value: %d", bool_val);
         break;
@@ -180,6 +186,12 @@ void TreeNode::printType()
             break;
         case STMT_SCANF:
             printf("statement_scanf");
+            break;
+        case STMT_MAIN:
+            printf("statement_main");
+            break;
+        case STMT_FUNC:
+            printf("statement_function");
             break;
         case STMT_BLANK:
             printf("statement_blank");

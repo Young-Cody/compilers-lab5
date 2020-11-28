@@ -34,6 +34,7 @@ LINECOMMENT \/\/[^\n]*
 "break" return BREAK;
 "printf" return PRINTF;
 "scanf" return SCANF;
+"main" return MAIN;
 
 "++" return INCREMENT;
 "--" return DECREMENT;

@@ -13,6 +13,8 @@ enum NodeType{
     NODE_CONSTDECL,
     NODE_INITVAL,
     NODE_VARDECL,
+    NODE_FUNCDEF,
+    NODE_FUNCFPARAM,
     NODE_BOOL,
     NODE_VAR,
     NODE_CONSTVAR,
@@ -33,12 +35,14 @@ enum StmtType{
     STMT_VARDECL,
     STMT_PRINTF,
     STMT_SCANF,
+    STMT_MAIN,
     STMT_BLANK,
     STMT_CONTINUE,
     STMT_BREAK,
     STMT_RETURN,
     STMT_EXPR,
-    STMT_COMPOUND
+    STMT_COMPOUND,
+    STMT_FUNC
 };
 
 enum OpType{

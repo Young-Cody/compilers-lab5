@@ -17,7 +17,7 @@
 %token LPAREN RPAREN LBRACE RBRACE SEMICOLON LBRACKET RBRACKET
 %token TRUE FALSE
 %token ADD ASSIGN EQUAL NOT MINUS MUL DIV MOD OR AND NOTEQUAL LESS GREATER LESSEAUAL GREATEREQUAL 
-%token PRINTF SCANF
+%token PRINTF SCANF MAIN
 %token CONST
 %token RETURN CONTINUE BREAK QUESTION COLON DECREMENT INCREMENT
 
@@ -59,6 +59,8 @@ stmt
     | compoundStmt {$$=$1;}
     | printfStmt {$$=$1;}
     | scanfStmt {$$=$1;}
+    | mainStmt {$$=$1;}
+    | funcStmt {$$=$1;}
     ;
 exprStmt
     : expr SEMICOLON {
@@ -187,6 +189,26 @@ scanfStmt
         node->addChild(e);
         node->lineno = e->lineno;
         $$=node;
+    }
+    ;
+mainStmt
+    : type MAIN LPAREN optFuncFParams RPAREN compoundStmt {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_MAIN;
+        node->addChild($1);
+        node->addChild($4);
+        node->addChild($6);
+        node->lineno = $1->lineno;
+        $$ = node;
+    }
+    ;
+funcStmt
+    : funcDef {
+        TreeNode *node = new TreeNode(NODE_STMT);
+        node->stmtType = STMT_FUNC;
+        node->addChild($1);
+        node->lineno = $1->lineno;
+        $$ = node;
     }
     ;
 optExpr
@@ -420,7 +442,7 @@ constDeclStmt
             head = head->sibling;
         }
     }
-    ;
+    ; 
 constDefList
     :
     constDefList COMMA constDef {
@@ -529,6 +551,43 @@ varDecl
         TreeNode *t = installID($1);
         node->addChild(t);
         if($2) node->addChild($2);
+        node->lineno = $1->lineno;
+        $$ = node;
+    }
+    ;
+funcDef
+    :
+    type ID LPAREN optFuncFParams RPAREN compoundStmt {
+        TreeNode *node = new TreeNode(NODE_FUNCDEF);
+        node->addChild($1);
+        node->addChild($2);
+        if($4) node->addChild($4);
+        node->addChild($6);
+        node->lineno = $1->lineno;
+        $$ = node;
+    }
+    ;
+optFuncFParams
+    :
+    funcFParams { $$ = $1;}
+    | {$$ = nullptr;}
+    ;
+funcFParams
+    :
+    funcFParams COMMA funcFParam {
+        $$ = $1;
+        $1->addSibling($3);
+    }
+    |
+    funcFParam {$$ = $1;}
+    ;
+funcFParam
+    :
+    type ID {
+        TreeNode *node = new TreeNode(NODE_FUNCFPARAM);
+        TreeNode *id = installID($2);
+        node->addChild($1);
+        node->addChild(id);
         node->lineno = $1->lineno;
         $$ = node;
     }
